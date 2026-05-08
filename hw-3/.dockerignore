@@ -1,0 +1,10 @@
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.zip
+.DS_Store
+.git/
+.pytest_cache/
+docs/
