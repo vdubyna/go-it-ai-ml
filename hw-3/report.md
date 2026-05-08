@@ -71,9 +71,5 @@ no git/curl/vim/apt-get/htop found
 
 ## Подальша оптимізація
 
-- Зібрати окремий wheelhouse у builder stage і копіювати тільки потрібні wheels.
-- Використати CPU-only PyTorch wheel з окремого index, якщо це дозволено середовищем.
-- Перевірити distroless або custom minimal runtime, але тільки після тестів сумісності з PyTorch native libraries.
 - Винести модель у volume або object storage, якщо потрібно часто оновлювати модель без rebuild image.
 - Додати security scan (`trivy`, `docker scout`) і прибрати пакети, які не потрібні для production inference.
-- Для edge/mobile сценаріїв розглянути TorchScript Lite або ONNX Runtime.
