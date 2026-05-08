@@ -35,10 +35,10 @@ pytorch-image-classifier/
 └── save_model.py
 ```
 
-## Поточна структура HW-3
+## Поточна структура Lesson-3
 
 ```text
-hw-3/
+lesson-3/
 ├── inference.py
 ├── export_model.py
 ├── model.pt

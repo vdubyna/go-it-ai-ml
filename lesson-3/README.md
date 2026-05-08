@@ -5,7 +5,7 @@
 ## Структура
 
 ```text
-hw-3/
+lesson-3/
 ├── inference.py
 ├── export_model.py
 ├── model.pt
@@ -21,7 +21,7 @@ hw-3/
 ## Підготовка середовища
 
 ```bash
-cd hw-3
+cd lesson-3
 chmod +x install_dev_tools.sh
 ./install_dev_tools.sh
 ```
@@ -31,7 +31,7 @@ chmod +x install_dev_tools.sh
 ## Експорт TorchScript моделі
 
 ```bash
-cd hw-3
+cd lesson-3
 python3 export_model.py
 ```
 
@@ -40,7 +40,7 @@ python3 export_model.py
 ## Локальний inference
 
 ```bash
-cd hw-3
+cd lesson-3
 python3 inference.py sample.jpg
 ```
 
@@ -56,7 +56,7 @@ Top-3 predictions:
 ## Docker: fat image
 
 ```bash
-cd hw-3
+cd lesson-3
 docker build -f Dockerfile.fat -t hw3-pytorch-fat .
 docker run --rm hw3-pytorch-fat
 ```
@@ -70,7 +70,7 @@ docker run --rm -v "$PWD:/data" hw3-pytorch-fat /data/your-image.jpg
 ## Docker: slim image
 
 ```bash
-cd hw-3
+cd lesson-3
 docker build -f Dockerfile.slim -t hw3-pytorch-slim .
 docker run --rm hw3-pytorch-slim
 ```
