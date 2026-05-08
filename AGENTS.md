@@ -7,10 +7,9 @@
 - Не використовуй `.ru` домени або російськомовні джерела як референси, якщо користувач прямо цього не попросив.
 - Віддавай перевагу українським, англомовним, EU, US або іншим надійним міжнародним джерелам.
 
-## HW-3 docs workflow
+## Lesson-3 workflow
 
-- Для задач у `hw-3` спочатку відкривай `hw-3/docs/index.md`.
-- Використовуй цей index як wiki-навігатор: він підкаже, який PDF читати для Dockerfile, оптимізації image, FastAPI або Docker Compose.
-- PDF-файли в `hw-3/docs` вважай канонічними навчальними матеріалами. `index.md` - це коротка мапа, не повна заміна джерел.
-- Якщо змінюєш підхід, структуру або додаєш нові матеріали до `hw-3/docs`, онови `hw-3/docs/index.md`.
-- Для Docker/Compose змін дотримуйся порядку з index: базовий image, перевірка inference, оптимізація, FastAPI, Compose.
+- Для задач домашнього завдання використовуй папку `lesson-3`.
+- У гілці `lesson-3` навчальні PDF та `docs/` не зберігаються; орієнтуйся на `lesson-3/README.md` і `lesson-3/report.md`.
+- Для Docker змін тримай структуру простою: TorchScript model, `inference.py`, `Dockerfile.fat`, `Dockerfile.slim`, `install_dev_tools.sh`, `requirements.txt`, `report.md`.
+- Якщо змінюєш запуск або структуру файлів, онови `lesson-3/README.md`.
