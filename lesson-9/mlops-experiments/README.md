@@ -104,7 +104,7 @@ password: admin
 lesson-9/mlops-experiments/argocd/applications
 ```
 
-Якщо ArgoCD встановлено Terraform-ом з `lesson-7`, root Application має дивитись на цю папку:
+Root Application в ArgoCD налаштований на цю папку:
 
 ```text
 repoURL: https://github.com/vdubyna/go-it-ai-ml.git
@@ -113,7 +113,7 @@ path: lesson-9/mlops-experiments/argocd
 directory.recurse: true
 ```
 
-Оновлення root Application через Terraform:
+Оновлення root Application виконувалося через Terraform з `lesson-7`:
 
 ```bash
 cd lesson-7/terraform/argocd
@@ -122,7 +122,7 @@ terraform apply \
   -var="app_repo_path=lesson-9/mlops-experiments/argocd"
 ```
 
-Якщо потрібно примусово оновити ArgoCD після push:
+Після push ArgoCD оновлювався hard refresh:
 
 ```bash
 kubectl -n infra-tools annotate application goit-argo-root \
@@ -182,12 +182,6 @@ MLflow UI:
 kubectl port-forward -n application svc/mlflow-tracking 5000:5000
 ```
 
-Якщо локальний порт `5000` зайнятий:
-
-```bash
-kubectl port-forward -n application svc/mlflow-tracking 5500:5000
-```
-
 MinIO API:
 
 ```bash
@@ -245,26 +239,10 @@ AWS_SECRET_ACCESS_KEY=minio123
 MLFLOW_S3_ENDPOINT_URL=http://localhost:9000
 ```
 
-Якщо MLflow port-forward зроблений на `5500:5000`, змініть:
-
-```env
-MLFLOW_TRACKING_URI=http://localhost:5500
-```
-
 Запуск:
 
 ```bash
 python train_and_push.py
-```
-
-Для запуску з pod-а всередині Kubernetes використовуйте service DNS:
-
-```env
-MLFLOW_TRACKING_URI=http://mlflow-tracking.application.svc.cluster.local:5000
-PUSHGATEWAY_URL=http://pushgateway.monitoring.svc.cluster.local:9091
-MLFLOW_S3_ENDPOINT_URL=http://minio.application.svc.cluster.local:9000
-AWS_ACCESS_KEY_ID=minio
-AWS_SECRET_ACCESS_KEY=minio123
 ```
 
 Скрипт тренує 9 моделей:
@@ -344,12 +322,6 @@ requirements.txt
 http://localhost:5000
 ```
 
-Або, якщо використовується локальний порт `5500`:
-
-```text
-http://localhost:5500
-```
-
 У experiment `Iris Quality Monitoring` мають бути runs з:
 
 - params: `learning_rate`, `epochs`, `dataset`;
@@ -361,8 +333,6 @@ http://localhost:5500
 ```bash
 curl "http://localhost:5000/api/2.0/mlflow/experiments/get-by-name?experiment_name=Iris%20Quality%20Monitoring"
 ```
-
-Якщо MLflow працює на локальному `5500`, замініть порт у команді.
 
 ## Перевірка PushGateway
 
@@ -399,7 +369,7 @@ curl "http://localhost:9090/api/v1/query?query=mlflow_accuracy"
 curl "http://localhost:9090/api/v1/query?query=mlflow_loss"
 ```
 
-Target PushGateway можна перевірити тут:
+Target PushGateway перевірявся тут:
 
 ```text
 http://localhost:9090/targets
@@ -452,7 +422,7 @@ Dashboard містить:
 - `MLflow Loss` - графік loss по run-ах;
 - `Experiment Metrics by Run` - таблицю з labels `run_id`, `learning_rate`, `epochs`.
 
-Якщо графіки порожні, встановіть time range `Last 1 hour` або `Last 6 hours` і натисніть refresh.
+Для dashboard використано time range `Last 1 hour`.
 
 Візуальний результат dashboard:
 
@@ -462,15 +432,13 @@ Dashboard містить:
 
 Зупиніть локальні `port-forward` процеси комбінацією `Ctrl+C` у відповідних терміналах.
 
-Якщо потрібно прибрати тільки застосунки lesson-9 з кластера, видаліть ArgoCD applications:
+Очищення застосунків lesson-9 з кластера:
 
 ```bash
 kubectl delete application grafana minio mlflow mlflow-postgres prometheus pushgateway -n infra-tools
 ```
 
-Якщо root Application продовжує синхронізувати lesson-9, спочатку змініть або видаліть root Application, інакше ArgoCD може створити ресурси знову.
-
-Якщо інфраструктура була піднята Terraform-ом з `lesson-7`, після перевірки можна видалити ArgoCD та EKS:
+Очищення ArgoCD та EKS, які використовувалися для роботи:
 
 ```bash
 cd lesson-7/terraform/argocd
@@ -480,4 +448,4 @@ cd ../eks
 terraform destroy
 ```
 
-Якщо S3 bucket використовується для Terraform state, його можна залишити. Вартість S3 залежить від обсягу збережених даних.
+Terraform state bucket залишається як службове сховище state.
