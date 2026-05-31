@@ -316,6 +316,86 @@ http://localhost:5500
 
 Пароль MLflow: `mlflowpassword123`
 
+## 8. Видалення та очищення ресурсів
+
+Видаляйте ресурси у такому порядку: спочатку GitOps застосунки й LoadBalancer, потім ArgoCD, потім EKS, і лише в кінці S3 bucket зі state. Так VPC не залишиться заблокованою через Kubernetes LoadBalancer або security groups.
+
+Зупиніть auto-sync root Application, щоб ArgoCD не створював ресурси повторно під час cleanup:
+
+```bash
+kubectl patch application goit-argo-root \
+  -n infra-tools \
+  --type merge \
+  -p '{"spec":{"syncPolicy":null}}'
+```
+
+Видаліть MLflow Application і дочекайтеся видалення Kubernetes ресурсів, включно з AWS LoadBalancer:
+
+```bash
+kubectl delete application mlflow -n infra-tools --wait=true --timeout=300s
+kubectl delete namespace application --wait=true --timeout=300s
+```
+
+Перевірте, що MLflow LoadBalancer більше не існує:
+
+```bash
+aws elb describe-load-balancers \
+  --profile vdubyna \
+  --region us-east-1 \
+  --load-balancer-name a4580cd6e6ac04c7ca76a519e7133c9f
+```
+
+Якщо команда повертає `LoadBalancerNotFound`, LoadBalancer видалений.
+
+Щоб Terraform міг швидко видалити root Application, приберіть ArgoCD finalizer з root Application:
+
+```bash
+kubectl patch application goit-argo-root \
+  -n infra-tools \
+  --type json \
+  -p='[{"op":"remove","path":"/metadata/finalizers"}]'
+```
+
+Видаліть ArgoCD:
+
+```bash
+cd lesson-7/terraform/argocd
+terraform destroy
+```
+
+Видаліть EKS і мережеву інфраструктуру:
+
+```bash
+cd ../eks
+terraform destroy
+```
+
+Коли Terraform destroy завершиться, очистіть S3 backend bucket:
+
+```bash
+aws s3 rm s3://goit-mlops-terraform-601535178731 --recursive --profile vdubyna
+
+aws s3api delete-bucket \
+  --profile vdubyna \
+  --region us-east-1 \
+  --bucket goit-mlops-terraform-601535178731
+```
+
+Фінальна перевірка в AWS:
+
+```bash
+aws eks describe-cluster \
+  --profile vdubyna \
+  --region us-east-1 \
+  --name goit-mlops-eks
+
+aws s3api head-bucket \
+  --profile vdubyna \
+  --bucket goit-mlops-terraform-601535178731
+```
+
+Для обох команд очікувано отримати помилку про те, що ресурс не знайдений.
+
 ## GitOps repo
 
 Application manifest лежить у репозиторії:
