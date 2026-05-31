@@ -22,6 +22,9 @@ spec:
           repository: bitnamilegacy/mlflow
         gitImage:
           repository: bitnamilegacy/git
+        waitContainer:
+          image:
+            repository: bitnamilegacy/os-shell
 
         tracking:
           replicaCount: 1
@@ -66,4 +69,3 @@ spec:
     syncOptions:
       - CreateNamespace=true
   revisionHistoryLimit: 2
-
