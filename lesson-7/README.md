@@ -38,6 +38,118 @@ lesson-7/
     └── README.md
 ```
 
+## Повна інсталяція та розгортання
+
+Цей сценарій описує запуск усього проєкту з нуля: Terraform створює EKS, потім встановлює ArgoCD, а ArgoCD читає GitHub і деплоїть MLflow.
+
+Перед стартом потрібні:
+
+- AWS CLI з profile `vdubyna`;
+- Terraform;
+- `kubectl`;
+- Docker, якщо Terraform запускається через Docker image;
+- запушена гілка `lesson-7`, бо ArgoCD читає remote GitHub.
+
+Перевірте AWS profile:
+
+```bash
+aws configure list-profiles
+aws sts get-caller-identity --profile vdubyna
+```
+
+Terraform backend використовує S3 bucket:
+
+```text
+goit-mlops-terraform-601535178731
+```
+
+Якщо bucket ще не створений, створіть його перед `terraform init`:
+
+```bash
+aws s3api create-bucket \
+  --profile vdubyna \
+  --region us-east-1 \
+  --bucket goit-mlops-terraform-601535178731
+
+aws s3api put-bucket-versioning \
+  --profile vdubyna \
+  --region us-east-1 \
+  --bucket goit-mlops-terraform-601535178731 \
+  --versioning-configuration Status=Enabled
+
+aws s3api put-public-access-block \
+  --profile vdubyna \
+  --region us-east-1 \
+  --bucket goit-mlops-terraform-601535178731 \
+  --public-access-block-configuration \
+    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+aws s3api put-bucket-encryption \
+  --profile vdubyna \
+  --region us-east-1 \
+  --bucket goit-mlops-terraform-601535178731 \
+  --server-side-encryption-configuration \
+    '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+```
+
+Розгорніть EKS:
+
+```bash
+cd lesson-7/terraform/eks
+terraform init
+terraform plan
+terraform apply
+```
+
+Після створення кластера переключіть `kubectl` на EKS:
+
+```bash
+aws eks update-kubeconfig \
+  --profile vdubyna \
+  --region us-east-1 \
+  --name goit-mlops-eks
+
+kubectl config current-context
+kubectl get nodes
+```
+
+Закомітьте й запуште GitOps manifests у гілку `lesson-7`:
+
+```bash
+git switch lesson-7
+git status
+git push origin lesson-7
+```
+
+Розгорніть ArgoCD:
+
+```bash
+cd lesson-7/terraform/argocd
+terraform init
+terraform plan
+terraform apply
+```
+
+Після `terraform apply` ArgoCD створить root Application `goit-argo-root`, прочитає `lesson-7/goit-argo` з GitHub і автоматично застосує `application.yaml` для MLflow.
+
+Перевірте результат:
+
+```bash
+kubectl get pods -n infra-tools
+kubectl get applications -n infra-tools
+kubectl get pods -n application
+kubectl get svc -n application
+```
+
+Очікуваний стан:
+
+- pod-и ArgoCD у namespace `infra-tools` мають бути `Running`;
+- `goit-argo-root` і `mlflow` мають бути `Synced` / `Healthy`;
+- у namespace `application` мають працювати `demo-nginx`, `mlflow-postgresql`, `mlflow-tracking`;
+- service `mlflow-tracking` має тип `LoadBalancer` і зовнішній DNS.
+
+Увага: EKS, EC2 nodes і AWS LoadBalancer є платними ресурсами. Після перевірки домашнього завдання їх варто видалити через Terraform.
+
 ## 1. GitOps-репозиторій
 
 У цьому виконанні ArgoCD читає manifests з поточного репозиторію:
