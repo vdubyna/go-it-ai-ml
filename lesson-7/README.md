@@ -133,6 +133,8 @@ kubectl get applications -n infra-tools
 
 ## 5. Доступ до ArgoCD UI
 
+ArgoCD server встановлений як `ClusterIP`, тому адмінка відкривається локально через `kubectl port-forward`.
+
 Отримайте пароль адміністратора:
 
 ```bash
@@ -146,7 +148,11 @@ kubectl -n infra-tools get secret argocd-initial-admin-secret \
 kubectl port-forward svc/argocd-server -n infra-tools 8080:80
 ```
 
-Браузер: `http://localhost:8080`
+Адмінка ArgoCD:
+
+```text
+http://localhost:8080
+```
 
 Логін: `admin`
 
@@ -168,7 +174,7 @@ kubectl get applications -n infra-tools
 
 ## 7. Доступ до MLflow
 
-MLflow відкритий через AWS LoadBalancer:
+Основний спосіб: MLflow відкритий через AWS LoadBalancer.
 
 ```bash
 kubectl get svc mlflow-tracking -n application
@@ -181,6 +187,18 @@ http://a4580cd6e6ac04c7ca76a519e7133c9f-403934489.us-east-1.elb.amazonaws.com
 ```
 
 Якщо DNS ще не резолвиться відразу після створення LoadBalancer, зачекайте кілька хвилин і перевірте ще раз.
+
+Альтернативний спосіб: відкрити MLflow локально через port-forward.
+
+```bash
+kubectl port-forward -n application svc/mlflow-tracking 5500:80
+```
+
+Після цього відкрийте:
+
+```text
+http://localhost:5500
+```
 
 Логін MLflow: `admin`
 
