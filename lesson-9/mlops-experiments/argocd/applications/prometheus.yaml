@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus
+  namespace: infra-tools
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus
+    targetRevision: 29.9.0
+    helm:
+      releaseName: prometheus
+      valuesObject:
+        alertmanager:
+          enabled: false
+        kube-state-metrics:
+          enabled: false
+        prometheus-node-exporter:
+          enabled: false
+        prometheus-pushgateway:
+          enabled: false
+        server:
+          fullnameOverride: prometheus-server
+          retention: 1d
+          persistentVolume:
+            enabled: false
+          service:
+            type: ClusterIP
+            servicePort: 9090
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+        scrapeConfigs:
+          kubernetes-api-servers:
+            enabled: false
+          kubernetes-nodes:
+            enabled: false
+          kubernetes-nodes-cadvisor:
+            enabled: false
+          kubernetes-service-endpoints:
+            enabled: false
+          kubernetes-service-endpoints-slow:
+            enabled: false
+          prometheus-pushgateway:
+            enabled: false
+          kubernetes-services:
+            enabled: false
+          kubernetes-pods:
+            enabled: false
+          pushgateway:
+            enabled: true
+            job_name: pushgateway
+            honor_labels: true
+            static_configs:
+              - targets:
+                  - pushgateway.monitoring.svc.cluster.local:9091
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  revisionHistoryLimit: 2

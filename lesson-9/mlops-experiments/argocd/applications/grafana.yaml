@@ -1,0 +1,262 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: infra-tools
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana
+    targetRevision: 10.5.15
+    helm:
+      releaseName: grafana
+      valuesObject:
+        adminUser: admin
+        adminPassword: admin
+        persistence:
+          enabled: false
+        service:
+          type: ClusterIP
+          port: 80
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Prometheus
+                uid: prometheus
+                type: prometheus
+                access: proxy
+                url: http://prometheus-server.monitoring.svc.cluster.local:9090
+                isDefault: true
+                editable: true
+        dashboardProviders:
+          dashboardproviders.yaml:
+            apiVersion: 1
+            providers:
+              - name: default
+                orgId: 1
+                folder: MLOps
+                type: file
+                disableDeletion: false
+                editable: true
+                options:
+                  path: /var/lib/grafana/dashboards/default
+        dashboards:
+          default:
+            mlflow-experiment-monitoring:
+              json: |
+                {
+                  "annotations": {
+                    "list": [
+                      {
+                        "builtIn": 1,
+                        "datasource": {
+                          "type": "grafana",
+                          "uid": "-- Grafana --"
+                        },
+                        "enable": true,
+                        "hide": true,
+                        "iconColor": "rgba(0, 211, 255, 1)",
+                        "name": "Annotations & Alerts",
+                        "type": "dashboard"
+                      }
+                    ]
+                  },
+                  "editable": true,
+                  "fiscalYearStartMonth": 0,
+                  "graphTooltip": 0,
+                  "id": null,
+                  "links": [],
+                  "panels": [
+                    {
+                      "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                      },
+                      "fieldConfig": {
+                        "defaults": {
+                          "decimals": 4,
+                          "max": 1,
+                          "min": 0,
+                          "unit": "percentunit"
+                        },
+                        "overrides": []
+                      },
+                      "gridPos": {
+                        "h": 8,
+                        "w": 12,
+                        "x": 0,
+                        "y": 0
+                      },
+                      "id": 1,
+                      "options": {
+                        "legend": {
+                          "calcs": ["lastNotNull"],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                        },
+                        "tooltip": {
+                          "mode": "single",
+                          "sort": "none"
+                        }
+                      },
+                      "targets": [
+                        {
+                          "datasource": {
+                            "type": "prometheus",
+                            "uid": "prometheus"
+                          },
+                          "editorMode": "code",
+                          "expr": "mlflow_accuracy",
+                          "legendFormat": "lr={{learning_rate}}, epochs={{epochs}}",
+                          "range": true,
+                          "refId": "A"
+                        }
+                      ],
+                      "title": "MLflow Accuracy",
+                      "type": "timeseries"
+                    },
+                    {
+                      "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                      },
+                      "fieldConfig": {
+                        "defaults": {
+                          "decimals": 4
+                        },
+                        "overrides": []
+                      },
+                      "gridPos": {
+                        "h": 8,
+                        "w": 12,
+                        "x": 12,
+                        "y": 0
+                      },
+                      "id": 2,
+                      "options": {
+                        "legend": {
+                          "calcs": ["lastNotNull"],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                        },
+                        "tooltip": {
+                          "mode": "single",
+                          "sort": "none"
+                        }
+                      },
+                      "targets": [
+                        {
+                          "datasource": {
+                            "type": "prometheus",
+                            "uid": "prometheus"
+                          },
+                          "editorMode": "code",
+                          "expr": "mlflow_loss",
+                          "legendFormat": "lr={{learning_rate}}, epochs={{epochs}}",
+                          "range": true,
+                          "refId": "A"
+                        }
+                      ],
+                      "title": "MLflow Loss",
+                      "type": "timeseries"
+                    },
+                    {
+                      "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                      },
+                      "fieldConfig": {
+                        "defaults": {
+                          "decimals": 4
+                        },
+                        "overrides": []
+                      },
+                      "gridPos": {
+                        "h": 9,
+                        "w": 24,
+                        "x": 0,
+                        "y": 8
+                      },
+                      "id": 3,
+                      "options": {
+                        "cellHeight": "sm",
+                        "footer": {
+                          "show": false
+                        },
+                        "showHeader": true
+                      },
+                      "targets": [
+                        {
+                          "datasource": {
+                            "type": "prometheus",
+                            "uid": "prometheus"
+                          },
+                          "editorMode": "code",
+                          "expr": "mlflow_accuracy",
+                          "format": "table",
+                          "instant": true,
+                          "legendFormat": "__auto",
+                          "range": false,
+                          "refId": "Accuracy"
+                        },
+                        {
+                          "datasource": {
+                            "type": "prometheus",
+                            "uid": "prometheus"
+                          },
+                          "editorMode": "code",
+                          "expr": "mlflow_loss",
+                          "format": "table",
+                          "instant": true,
+                          "legendFormat": "__auto",
+                          "range": false,
+                          "refId": "Loss"
+                        }
+                      ],
+                      "title": "Experiment Metrics by Run",
+                      "type": "table"
+                    }
+                  ],
+                  "refresh": "10s",
+                  "schemaVersion": 42,
+                  "tags": ["mlflow", "lesson-9", "mlops"],
+                  "templating": {
+                    "list": []
+                  },
+                  "time": {
+                    "from": "now-1h",
+                    "to": "now"
+                  },
+                  "timepicker": {},
+                  "timezone": "browser",
+                  "title": "MLflow Experiment Monitoring",
+                  "uid": "mlflow-experiment-monitoring",
+                  "version": 1,
+                  "weekStart": ""
+                }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  revisionHistoryLimit: 2
