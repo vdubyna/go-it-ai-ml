@@ -46,12 +46,16 @@ kubectl get svc -n application
 ## Доступ до MLflow
 
 ```bash
-kubectl port-forward -n application svc/mlflow-tracking 5500:80
+kubectl get svc mlflow-tracking -n application
 ```
 
-Відкрити: `http://localhost:5500`
+Відкрити:
 
-Якщо локальний порт `5000` вільний, можна використати `5000:80`.
+```text
+http://a4580cd6e6ac04c7ca76a519e7133c9f-403934489.us-east-1.elb.amazonaws.com
+```
+
+Якщо DNS ще не резолвиться відразу після створення LoadBalancer, зачекайте кілька хвилин і перевірте ще раз.
 
 Логін: `admin`
 
