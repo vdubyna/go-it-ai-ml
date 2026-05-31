@@ -45,6 +45,13 @@ spec:
             limits:
               cpu: 1500m
               memory: 2Gi
+          extraEnvVars:
+            - name: AWS_ACCESS_KEY_ID
+              value: minio
+            - name: AWS_SECRET_ACCESS_KEY
+              value: minio123
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
         postgresql:
           enabled: false
         externalDatabase:
