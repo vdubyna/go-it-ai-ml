@@ -8,9 +8,11 @@
 mlops-experiments/
 ├── argocd/
 │   └── applications/
+│       ├── grafana.yaml
 │       ├── mlflow.yaml
 │       ├── minio.yaml
 │       ├── postgres.yaml
+│       ├── prometheus.yaml
 │       └── pushgateway.yaml
 ├── experiments/
 │   ├── .env.example
@@ -64,6 +66,8 @@ kubectl get svc -n monitoring
 application/mlflow-tracking        ClusterIP  5000
 application/minio                  ClusterIP  9000
 application/mlflow-postgres-postgresql ClusterIP 5432
+monitoring/prometheus-server       ClusterIP  9090
+monitoring/grafana                 ClusterIP  80
 monitoring/pushgateway             ClusterIP  9091
 ```
 
@@ -87,10 +91,24 @@ PushGateway:
 kubectl port-forward -n monitoring svc/pushgateway 9091:9091
 ```
 
+Prometheus:
+
+```bash
+kubectl port-forward -n monitoring svc/prometheus-server 9090:9090
+```
+
+Grafana:
+
+```bash
+kubectl port-forward -n monitoring svc/grafana 3000:80
+```
+
 Після цього:
 
 - MLflow UI: http://localhost:5000
 - PushGateway: http://localhost:9091
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (`admin` / `admin`)
 
 Усередині кластера PushGateway доступний як:
 
@@ -162,7 +180,7 @@ mlflow_loss
 
 ## Grafana
 
-У Grafana відкрийте `Explore`, оберіть datasource `Prometheus` і виконайте запити:
+Grafana розгортається з уже налаштованим datasource `Prometheus`. У Grafana відкрийте `Explore`, оберіть datasource `Prometheus` і виконайте запити:
 
 ```promql
 mlflow_accuracy
@@ -176,7 +194,7 @@ max by (run_id, learning_rate, epochs) (mlflow_accuracy)
 min by (run_id, learning_rate, epochs) (mlflow_loss)
 ```
 
-Якщо метрики не видно, перевірте, що Prometheus scrape-ить сервіс `pushgateway` у namespace `monitoring`. У маніфесті додані scrape-анотації `prometheus.io/scrape=true` і `prometheus.io/port=9091`; для kube-prometheus-stack може знадобитись ServiceMonitor з labels саме вашого Prometheus release.
+Якщо метрики не видно, перевірте target у Prometheus: http://localhost:9090/targets. У маніфесті Prometheus додано static scrape target `pushgateway.monitoring.svc.cluster.local:9091`, а на сервісі PushGateway також є scrape-анотації.
 
 ## Скриншоти для здачі
 
