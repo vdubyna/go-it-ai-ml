@@ -345,8 +345,12 @@ Dashboard містить:
 ```text
 lesson-9/mlops-experiments/screenshots/mlflow-ui.png
 lesson-9/mlops-experiments/screenshots/grafana-explore.png
-lesson-9/mlops-experiments/screenshots/grafana-dashboard.png
+lesson-9/mlops-experiments/screenshots/grafana-dashboard.jpg
 ```
+
+Поточний скриншот Grafana dashboard:
+
+![Grafana dashboard with MLflow experiment metrics](screenshots/grafana-dashboard.jpg)
 
 У LMS можна додати:
 
