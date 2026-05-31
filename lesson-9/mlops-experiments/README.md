@@ -1,20 +1,43 @@
 # Lesson 9: MLflow Experiments Monitoring
 
-Домашнє завдання з MLOps: MLflow Tracking Server, MinIO, PostgreSQL, PushGateway, Prometheus і Grafana розгортаються декларативно через ArgoCD. Python-скрипт запускає серію ML-експериментів на Iris dataset, логує параметри, метрики й модель у MLflow, пушить `mlflow_accuracy` та `mlflow_loss` у PushGateway, а найкращу модель копіює в `best_model/`.
+Домашнє завдання з MLOps присвячене моніторингу ML-експериментів у Kubernetes. У роботі розгорнуто MLflow Tracking Server з MinIO та PostgreSQL, додано PushGateway, Prometheus і Grafana, а також підготовлено Python-скрипт, який тренує кілька моделей, логує результати в MLflow і відправляє метрики в Prometheus через PushGateway.
 
-Гілка для перевірки: [lesson-9](https://github.com/vdubyna/go-it-ai-ml/tree/lesson-9).
+Гілка з реалізацією: [lesson-9](https://github.com/vdubyna/go-it-ai-ml/tree/lesson-9).
+
+## Завдання
+
+Потрібно було:
+
+- розгорнути через ArgoCD інфраструктуру для MLflow experiments monitoring;
+- налаштувати MinIO як artifact storage для MLflow;
+- налаштувати PostgreSQL як backend store для MLflow;
+- підняти PushGateway, Prometheus і Grafana для збору та перегляду метрик;
+- написати скрипт тренування, який запускає кілька експериментів, логує параметри, метрики й модель;
+- вибрати найкращу модель і зберегти її в `best_model/`;
+- показати метрики `accuracy` і `loss` у Grafana через Prometheus.
+
+## Очікувані Результати
+
+- MLflow, MinIO, PostgreSQL, PushGateway розгорнуті через ArgoCD;
+- скрипт тренує кілька моделей і логує метрики;
+- найкраща модель скопійована в `best_model/`;
+- метрики `accuracy` і `loss` видно в `Grafana -> Prometheus -> Explore`;
+- усі інструкції для розгортання, запуску, перевірки й очищення є в цьому README.
 
 ## Що Реалізовано
 
-- `MinIO` для MLflow artifacts, bucket `mlflow-artifacts`;
-- `PostgreSQL` для backend store MLflow, база `mlflow`;
-- `MLflow Tracking Server`, `ClusterIP`, порт `5000`;
-- `Prometheus PushGateway`, namespace `monitoring`, `ClusterIP`, порт `9091`;
-- `Prometheus`, який scrape-ить PushGateway;
-- `Grafana` з datasource `Prometheus` і готовим dashboard-ом;
-- `train_and_push.py`, який тренує кілька моделей, логує runs у MLflow, пушить метрики й копіює найкращу модель.
+- `MinIO` у namespace `application` з bucket `mlflow-artifacts`;
+- `PostgreSQL` у namespace `application` з базою `mlflow`;
+- `MLflow Tracking Server` у namespace `application`, сервіс `ClusterIP`, порт `5000`;
+- `PushGateway` у namespace `monitoring`, сервіс `ClusterIP`, порт `9091`;
+- `Prometheus` у namespace `monitoring`, який scrape-ить PushGateway;
+- `Grafana` у namespace `monitoring` з datasource `Prometheus` і dashboard `MLflow Experiment Monitoring`;
+- `experiments/train_and_push.py`, який тренує grid моделей `SGDClassifier` на Iris dataset;
+- логування в MLflow: params `learning_rate`, `epochs`, `dataset`, metrics `accuracy`, `loss`, artifact `model/`;
+- пуш метрик `mlflow_accuracy` і `mlflow_loss` у PushGateway;
+- копіювання найкращої моделі в `best_model/model/`.
 
-## Структура
+## Структура Проєкту
 
 ```text
 mlops-experiments/
@@ -33,11 +56,49 @@ mlops-experiments/
 ├── best_model/
 │   └── model/
 └── screenshots/
+    └── grafana-dashboard.jpg
+```
+
+## Компоненти Та Дані
+
+| Компонент | Namespace | Сервіс | Порт | Призначення |
+| --- | --- | --- | --- | --- |
+| MLflow | `application` | `mlflow-tracking` | `5000` | UI, tracking server, runs, metrics, artifacts |
+| MinIO | `application` | `minio` | `9000`, `9001` | S3-compatible artifact storage |
+| PostgreSQL | `application` | `mlflow-postgres-postgresql` | `5432` | backend store для MLflow |
+| PushGateway | `monitoring` | `pushgateway` | `9091` | приймає метрики зі скрипта |
+| Prometheus | `monitoring` | `prometheus-server` | `9090` | scrape PushGateway і PromQL |
+| Grafana | `monitoring` | `grafana` | `80` | Explore і dashboard для MLflow метрик |
+
+Використані Helm charts:
+
+| Application | Chart | Version |
+| --- | --- | --- |
+| `minio` | `bitnami/minio` | `13.7.2` |
+| `mlflow-postgres` | `bitnami/postgresql` | `12.5.6` |
+| `mlflow` | `bitnami/mlflow` | `5.1.17` |
+| `pushgateway` | `prometheus-community/prometheus-pushgateway` | `3.6.0` |
+| `prometheus` | `prometheus-community/prometheus` | `29.9.0` |
+| `grafana` | `grafana/grafana` | `10.5.15` |
+
+MinIO credentials для навчального середовища:
+
+```text
+AWS_ACCESS_KEY_ID=minio
+AWS_SECRET_ACCESS_KEY=minio123
+MLFLOW_S3_ENDPOINT_URL=http://localhost:9000
+```
+
+Grafana credentials:
+
+```text
+username: admin
+password: admin
 ```
 
 ## Розгортання Через ArgoCD
 
-Маніфести Application лежать у:
+Маніфести ArgoCD Application лежать у:
 
 ```text
 lesson-9/mlops-experiments/argocd/applications
@@ -52,7 +113,7 @@ path: lesson-9/mlops-experiments/argocd
 directory.recurse: true
 ```
 
-Команда для оновлення root Application через Terraform:
+Оновлення root Application через Terraform:
 
 ```bash
 cd lesson-7/terraform/argocd
@@ -113,7 +174,7 @@ monitoring/prometheus-server                 ClusterIP  9090
 monitoring/grafana                           ClusterIP  80
 ```
 
-## Port-forward
+## Port-Forward Для Локальної Перевірки
 
 MLflow UI:
 
@@ -121,7 +182,7 @@ MLflow UI:
 kubectl port-forward -n application svc/mlflow-tracking 5000:5000
 ```
 
-Якщо локальний порт `5000` зайнятий, можна використати `5500`:
+Якщо локальний порт `5000` зайнятий:
 
 ```bash
 kubectl port-forward -n application svc/mlflow-tracking 5500:5000
@@ -155,19 +216,15 @@ kubectl port-forward -n monitoring svc/grafana 3000:80
 
 ```text
 MLflow UI:    http://localhost:5000
+MinIO API:    http://localhost:9000
 PushGateway:  http://localhost:9091
 Prometheus:   http://localhost:9090
 Grafana:      http://localhost:3000
 ```
 
-Grafana credentials:
-
-```text
-username: admin
-password: admin
-```
-
 ## Запуск Експериментів
+
+Підготовка Python-середовища:
 
 ```bash
 cd lesson-9/mlops-experiments/experiments
@@ -175,7 +232,6 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-python train_and_push.py
 ```
 
 Для локального запуску через port-forward у `.env`:
@@ -183,18 +239,25 @@ python train_and_push.py
 ```env
 MLFLOW_TRACKING_URI=http://localhost:5000
 PUSHGATEWAY_URL=http://localhost:9091
+MLFLOW_EXPERIMENT_NAME=Iris Quality Monitoring
 AWS_ACCESS_KEY_ID=minio
 AWS_SECRET_ACCESS_KEY=minio123
 MLFLOW_S3_ENDPOINT_URL=http://localhost:9000
 ```
 
-Якщо MLflow port-forward зроблений на `5500:5000`, використовуйте:
+Якщо MLflow port-forward зроблений на `5500:5000`, змініть:
 
 ```env
 MLFLOW_TRACKING_URI=http://localhost:5500
 ```
 
-Для запуску з pod-а всередині Kubernetes:
+Запуск:
+
+```bash
+python train_and_push.py
+```
+
+Для запуску з pod-а всередині Kubernetes використовуйте service DNS:
 
 ```env
 MLFLOW_TRACKING_URI=http://mlflow-tracking.application.svc.cluster.local:5000
@@ -204,13 +267,50 @@ AWS_ACCESS_KEY_ID=minio
 AWS_SECRET_ACCESS_KEY=minio123
 ```
 
-Після успішного запуску найкраща модель зберігається тут:
+Скрипт тренує 9 моделей:
+
+```text
+learning_rates = [0.001, 0.01, 0.05]
+epochs_values  = [200, 500, 1000]
+```
+
+Найкраща модель вибирається за `accuracy DESC`, а при рівності - за `loss ASC`. Після успішного запуску вона копіюється сюди:
 
 ```text
 lesson-9/mlops-experiments/best_model/model/
 ```
 
-У поточному тестовому запуску найкращий run:
+## Результати Тестового Запуску
+
+Experiment у MLflow:
+
+```text
+Iris Quality Monitoring
+```
+
+Метрики, які логуються в MLflow:
+
+```text
+accuracy
+loss
+```
+
+Метрики, які пушаться у PushGateway і доступні в Prometheus:
+
+```text
+mlflow_accuracy
+mlflow_loss
+```
+
+Labels для Prometheus metrics:
+
+```text
+run_id
+learning_rate
+epochs
+```
+
+Найкращий run у поточному тестовому запуску:
 
 ```text
 run_id:        5ba14edafe0941efb792a0f182cfa482
@@ -218,6 +318,22 @@ learning_rate: 0.05
 epochs:        1000
 accuracy:      0.8421
 loss:          0.2742
+```
+
+Збережена модель:
+
+```text
+lesson-9/mlops-experiments/best_model/model/
+```
+
+У директорії моделі є стандартні MLflow artifacts:
+
+```text
+MLmodel
+model.pkl
+conda.yaml
+python_env.yaml
+requirements.txt
 ```
 
 ## Перевірка MLflow
@@ -318,7 +434,7 @@ mlflow_accuracy
 mlflow_loss
 ```
 
-Також автоматично створено dashboard:
+Dashboard створюється автоматично:
 
 ```text
 Dashboards -> MLOps -> MLflow Experiment Monitoring
@@ -334,48 +450,27 @@ Dashboard містить:
 
 - `MLflow Accuracy` - графік accuracy по run-ах;
 - `MLflow Loss` - графік loss по run-ах;
-- `Experiment Metrics by Run` - таблиця з labels `run_id`, `learning_rate`, `epochs`.
+- `Experiment Metrics by Run` - таблицю з labels `run_id`, `learning_rate`, `epochs`.
 
 Якщо графіки порожні, встановіть time range `Last 1 hour` або `Last 6 hours` і натисніть refresh.
 
-## Скриншоти Для Здачі
-
-Додайте скриншоти в папку `screenshots/`:
-
-```text
-lesson-9/mlops-experiments/screenshots/mlflow-ui.png
-lesson-9/mlops-experiments/screenshots/grafana-explore.png
-lesson-9/mlops-experiments/screenshots/grafana-dashboard.jpg
-```
-
-Поточний скриншот Grafana dashboard:
+Візуальний результат dashboard:
 
 ![Grafana dashboard with MLflow experiment metrics](screenshots/grafana-dashboard.jpg)
 
-У LMS можна додати:
+## Очищення Проєкту
 
-- скриншот MLflow experiment `Iris Quality Monitoring`;
-- скриншот Grafana Explore з `mlflow_accuracy` або `mlflow_loss`;
-- скриншот dashboard `MLflow Experiment Monitoring`;
-- посилання на гілку `lesson-9`.
+Зупиніть локальні `port-forward` процеси комбінацією `Ctrl+C` у відповідних терміналах.
 
-## Формат Здачі
+Якщо потрібно прибрати тільки застосунки lesson-9 з кластера, видаліть ArgoCD applications:
 
-Для LMS:
-
-```text
-ДЗ8_Прізвище_Імʼя.zip
+```bash
+kubectl delete application grafana minio mlflow mlflow-postgres prometheus pushgateway -n infra-tools
 ```
 
-У відповіді додайте посилання на гілку:
+Якщо root Application продовжує синхронізувати lesson-9, спочатку змініть або видаліть root Application, інакше ArgoCD може створити ресурси знову.
 
-```text
-https://github.com/vdubyna/go-it-ai-ml/tree/lesson-9
-```
-
-## Cleanup
-
-Після перевірки видаліть платні ресурси:
+Якщо інфраструктура була піднята Terraform-ом з `lesson-7`, після перевірки можна видалити ArgoCD та EKS:
 
 ```bash
 cd lesson-7/terraform/argocd
