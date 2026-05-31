@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import os
 import shutil
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
 from mlflow import MlflowClient
-from mlflow.artifacts import download_artifacts
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 from sklearn.datasets import load_iris
 from sklearn.linear_model import SGDClassifier
@@ -27,6 +27,7 @@ class RunResult:
     epochs: int
     accuracy: float
     loss: float
+    local_model_path: Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -136,7 +137,19 @@ def push_metrics(
     )
 
 
-def run_training_grid(experiment_id: str, pushgateway_url: str) -> list[RunResult]:
+def save_model_artifact(model: Pipeline, destination: Path) -> None:
+    if destination.exists():
+        shutil.rmtree(destination)
+
+    mlflow.sklearn.save_model(model, path=str(destination))
+    mlflow.log_artifacts(str(destination), artifact_path="model")
+
+
+def run_training_grid(
+    experiment_id: str,
+    pushgateway_url: str,
+    model_cache_dir: Path,
+) -> list[RunResult]:
     learning_rates = [0.001, 0.01, 0.05]
     epochs_values = [200, 500, 1000]
     results: list[RunResult] = []
@@ -146,18 +159,26 @@ def run_training_grid(experiment_id: str, pushgateway_url: str) -> list[RunResul
             run_name = f"sgd_lr_{learning_rate}_epochs_{epochs}"
             with mlflow.start_run(experiment_id=experiment_id, run_name=run_name) as run:
                 model, accuracy, loss = train_model(learning_rate, epochs)
+                run_id = run.info.run_id
+                local_model_path = model_cache_dir / run_id / "model"
 
                 mlflow.log_param("learning_rate", learning_rate)
                 mlflow.log_param("epochs", epochs)
                 mlflow.log_param("dataset", "sklearn.datasets.load_iris")
                 mlflow.log_metric("accuracy", accuracy)
                 mlflow.log_metric("loss", loss)
-                mlflow.sklearn.log_model(model, artifact_path="model")
+                save_model_artifact(model, local_model_path)
 
-                run_id = run.info.run_id
                 push_metrics(pushgateway_url, run_id, learning_rate, epochs, accuracy, loss)
 
-                result = RunResult(run_id, learning_rate, epochs, accuracy, loss)
+                result = RunResult(
+                    run_id=run_id,
+                    learning_rate=learning_rate,
+                    epochs=epochs,
+                    accuracy=accuracy,
+                    loss=loss,
+                    local_model_path=local_model_path,
+                )
                 results.append(result)
                 print(
                     "run_id={run_id} learning_rate={learning_rate} "
@@ -173,36 +194,44 @@ def run_training_grid(experiment_id: str, pushgateway_url: str) -> list[RunResul
     return results
 
 
-def download_best_model(experiment_id: str) -> RunResult:
+def select_best_model(experiment_id: str, results: list[RunResult]) -> RunResult:
+    if not results:
+        raise RuntimeError("No training results found.")
+
     client = MlflowClient()
     best_runs = client.search_runs(
         experiment_ids=[experiment_id],
         order_by=["metrics.accuracy DESC", "metrics.loss ASC"],
-        max_results=1,
+        max_results=len(results),
     )
     if not best_runs:
         raise RuntimeError("No MLflow runs found for the experiment.")
 
-    best_run = best_runs[0]
-    best_result = RunResult(
-        run_id=best_run.info.run_id,
-        learning_rate=float(best_run.data.params["learning_rate"]),
-        epochs=int(best_run.data.params["epochs"]),
-        accuracy=float(best_run.data.metrics["accuracy"]),
-        loss=float(best_run.data.metrics["loss"]),
-    )
+    result_by_run_id = {result.run_id: result for result in results}
+    for run in best_runs:
+        if run.info.run_id in result_by_run_id:
+            return result_by_run_id[run.info.run_id]
 
-    if BEST_MODEL_DIR.exists():
-        shutil.rmtree(BEST_MODEL_DIR)
+    return max(results, key=lambda result: (result.accuracy, -result.loss))
+
+
+def prepare_best_model_dir() -> Path:
     BEST_MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    for path in BEST_MODEL_DIR.iterdir():
+        if path.name == ".gitkeep":
+            continue
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
 
-    download_artifacts(
-        run_id=best_result.run_id,
-        artifact_path="model",
-        dst_path=str(BEST_MODEL_DIR),
-    )
+    return BEST_MODEL_DIR / "model"
 
-    return best_result
+
+def copy_best_model(best_result: RunResult) -> None:
+    target_dir = prepare_best_model_dir()
+    shutil.copytree(best_result.local_model_path, target_dir)
+
 
 
 def main() -> None:
@@ -214,8 +243,10 @@ def main() -> None:
     print(f"PushGateway URL: {pushgateway_url}")
     print(f"Experiment: {experiment_name} ({experiment_id})")
 
-    run_training_grid(experiment_id, pushgateway_url)
-    best_result = download_best_model(experiment_id)
+    with tempfile.TemporaryDirectory(prefix="mlflow-model-cache-") as cache_dir:
+        results = run_training_grid(experiment_id, pushgateway_url, Path(cache_dir))
+        best_result = select_best_model(experiment_id, results)
+        copy_best_model(best_result)
 
     print(
         "Best model: run_id={run_id} learning_rate={learning_rate} "
@@ -227,7 +258,7 @@ def main() -> None:
             loss=best_result.loss,
         )
     )
-    print(f"Model artifacts downloaded to: {BEST_MODEL_DIR}")
+    print(f"Best model copied to: {BEST_MODEL_DIR / 'model'}")
 
 
 if __name__ == "__main__":

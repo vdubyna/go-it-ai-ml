@@ -1,6 +1,6 @@
 # Lesson 9: MLflow experiments + PushGateway
 
-Цей проєкт розгортає MLflow-інфраструктуру через ArgoCD і запускає серію ML-експериментів для Iris dataset. Скрипт логує параметри, метрики й модель у MLflow, пушить `mlflow_accuracy` та `mlflow_loss` у Prometheus PushGateway, а після завершення завантажує найкращу модель у `best_model/`.
+Цей проєкт розгортає MLflow-інфраструктуру через ArgoCD і запускає серію ML-експериментів для Iris dataset. Скрипт логує параметри, метрики й модель у MLflow, пушить `mlflow_accuracy` та `mlflow_loss` у Prometheus PushGateway, а після завершення копіює найкращу модель у `best_model/`.
 
 ## Структура
 
@@ -127,7 +127,7 @@ PUSHGATEWAY_URL=http://pushgateway.monitoring.svc.cluster.local:9091
 MLFLOW_S3_ENDPOINT_URL=http://minio.application.svc.cluster.local:9000
 ```
 
-Після успішного запуску найкраща модель буде завантажена в:
+Після успішного запуску найкраща модель буде скопійована в:
 
 ```text
 lesson-9/mlops-experiments/best_model/model/
