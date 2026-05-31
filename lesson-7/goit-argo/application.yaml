@@ -39,7 +39,7 @@ spec:
               http: 80
           persistence:
             enabled: false
-          resourcesPreset: "nano"
+          resourcesPreset: "small"
 
         postgresql:
           enabled: true
