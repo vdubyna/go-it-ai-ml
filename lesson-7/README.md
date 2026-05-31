@@ -171,10 +171,12 @@ kubectl get applications -n infra-tools
 Для локального доступу використайте port-forward:
 
 ```bash
-kubectl port-forward -n application svc/mlflow-tracking 5000:80
+kubectl port-forward -n application svc/mlflow-tracking 5500:80
 ```
 
-Браузер: `http://localhost:5000`
+Браузер: `http://localhost:5500`
+
+Якщо локальний порт `5000` вільний, можна використати `5000:80`.
 
 Логін MLflow: `admin`
 
