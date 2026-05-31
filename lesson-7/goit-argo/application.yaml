@@ -29,19 +29,28 @@ spec:
         tracking:
           replicaCount: 1
           podAnnotations:
-            goit.dev/config-revision: "auth-password-20260531"
+            goit.dev/config-revision: "loadbalancer-resources-20260531"
           auth:
             enabled: true
             username: admin
             password: mlflowpassword123
             flaskServerSecretKey: goit-mlflow-secret-key
           service:
-            type: ClusterIP
+            type: LoadBalancer
             ports:
               http: 80
           persistence:
             enabled: false
-          resourcesPreset: "small"
+          resourcesPreset: "none"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+              ephemeral-storage: 50Mi
+            limits:
+              cpu: 1500m
+              memory: 2Gi
+              ephemeral-storage: 2Gi
 
         postgresql:
           enabled: true
