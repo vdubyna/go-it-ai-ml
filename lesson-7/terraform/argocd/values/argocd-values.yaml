@@ -1,0 +1,49 @@
+crds:
+  install: true
+  keep: true
+
+global:
+  domain: argocd.local
+  logging:
+    format: text
+    level: info
+
+configs:
+  cm:
+    admin.enabled: true
+    timeout.reconciliation: 60s
+    timeout.reconciliation.jitter: 10s
+    timeout.hard.reconciliation: 0s
+  params:
+    server.insecure: true
+  rbac:
+    policy.default: role:readonly
+    policy.csv: |
+      p, role:devops-admin, applications, *, */*, allow
+      p, role:devops-admin, clusters, get, *, allow
+      p, role:devops-admin, repositories, *, *, allow
+      p, role:devops-admin, logs, get, */*, allow
+      p, role:devops-admin, exec, create, */*, allow
+      g, devops, role:devops-admin
+    scopes: "[groups]"
+
+server:
+  extraArgs:
+    - --insecure
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+
+controller:
+  extraArgs:
+    - --status-processors=20
+    - --operation-processors=10
+
+repoServer:
+  extraArgs:
+    - --parallelismlimit=10
+
+applicationSet:
+  enabled: true
+

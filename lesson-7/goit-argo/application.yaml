@@ -1,0 +1,82 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mlflow
+  namespace: infra-tools
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: mlflow
+    targetRevision: 5.1.17
+    helm:
+      releaseName: mlflow
+      values: |
+        global:
+          security:
+            allowInsecureImages: true
+
+        image:
+          repository: bitnamilegacy/mlflow
+        gitImage:
+          repository: bitnamilegacy/git
+        waitContainer:
+          image:
+            repository: bitnamilegacy/os-shell
+
+        tracking:
+          replicaCount: 1
+          podAnnotations:
+            goit.dev/config-revision: "loadbalancer-resources-20260531"
+          auth:
+            enabled: true
+            username: admin
+            password: mlflowpassword123
+            flaskServerSecretKey: goit-mlflow-secret-key
+          service:
+            type: LoadBalancer
+            ports:
+              http: 80
+          persistence:
+            enabled: false
+          resourcesPreset: "none"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+              ephemeral-storage: 50Mi
+            limits:
+              cpu: 1500m
+              memory: 2Gi
+              ephemeral-storage: 2Gi
+
+        postgresql:
+          enabled: true
+          image:
+            repository: bitnamilegacy/postgresql
+          auth:
+            postgresPassword: mlflowpass
+            username: mlflow
+            password: mlflowpass
+            database: mlflowdb
+          primary:
+            persistence:
+              enabled: false
+
+        minio:
+          enabled: false
+
+        run:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: application
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  revisionHistoryLimit: 2
