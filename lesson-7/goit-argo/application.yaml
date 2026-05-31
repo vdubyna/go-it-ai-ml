@@ -1,0 +1,69 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mlflow
+  namespace: infra-tools
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: mlflow
+    targetRevision: 5.1.17
+    helm:
+      releaseName: mlflow
+      values: |
+        global:
+          security:
+            allowInsecureImages: true
+
+        image:
+          repository: bitnamilegacy/mlflow
+        gitImage:
+          repository: bitnamilegacy/git
+
+        tracking:
+          replicaCount: 1
+          auth:
+            enabled: true
+            username: admin
+            password: mlflowpass
+            flaskServerSecretKey: goit-mlflow-secret-key
+          service:
+            type: ClusterIP
+            ports:
+              http: 80
+          persistence:
+            enabled: false
+          resourcesPreset: "nano"
+
+        postgresql:
+          enabled: true
+          image:
+            repository: bitnamilegacy/postgresql
+          auth:
+            postgresPassword: mlflowpass
+            username: mlflow
+            password: mlflowpass
+            database: mlflowdb
+          primary:
+            persistence:
+              enabled: false
+
+        minio:
+          enabled: false
+
+        run:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: application
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  revisionHistoryLimit: 2
+
