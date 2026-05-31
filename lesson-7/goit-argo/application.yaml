@@ -28,6 +28,8 @@ spec:
 
         tracking:
           replicaCount: 1
+          podAnnotations:
+            goit.dev/config-revision: "auth-password-20260531"
           auth:
             enabled: true
             username: admin
