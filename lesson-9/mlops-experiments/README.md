@@ -187,6 +187,12 @@ mlflow_accuracy
 mlflow_loss
 ```
 
+Також автоматично створюється dashboard:
+
+```text
+Dashboards -> MLOps -> MLflow Experiment Monitoring
+```
+
 Для таблиці найзручніше увімкнути `Table` view. Для графіка можна використати:
 
 ```promql
