@@ -3,7 +3,7 @@
 Цей урок показує базовий GitOps workflow:
 
 - Terraform встановлює ArgoCD в EKS як Helm release у namespace `infra-tools`;
-- окремий GitOps-репозиторій `goit-argo` зберігає Kubernetes manifests і ArgoCD `Application`;
+- папка `lesson-7/goit-argo` в поточному репозиторії зберігає Kubernetes manifests і ArgoCD `Application`;
 - ArgoCD автоматично синхронізує Git і деплоїть MLflow з Helm-чарту.
 
 ## Структура
@@ -38,27 +38,9 @@ lesson-7/
     └── README.md
 ```
 
-## 1. Створення GitOps-репозиторію
+## 1. GitOps-репозиторій
 
-Створіть public GitHub repo:
-
-```bash
-goit-argo
-```
-
-Після цього запуште в нього вміст папки `lesson-7/goit-argo`:
-
-```bash
-cd lesson-7/goit-argo
-git init
-git branch -M main
-git add .
-git commit -m "bootstrap argocd mlflow deployment"
-git remote add origin https://github.com/vdubyna/goit-argo.git
-git push -u origin main
-```
-
-У цьому варіанті ArgoCD читає manifests з поточного репозиторію:
+У цьому виконанні ArgoCD читає manifests з поточного репозиторію:
 
 ```text
 https://github.com/vdubyna/go-it-ai-ml.git
@@ -127,7 +109,7 @@ terraform apply \
   -var="aws_profile=<aws-profile>" \
   -var="tf_state_bucket=<bucket-name>" \
   -var="eks_state_key=<eks-state-key>" \
-  -var="app_repo_url=https://github.com/<user>/goit-argo.git"
+  -var="app_repo_url=https://github.com/<user>/<repo>.git"
 ```
 
 ## 4. Перевірка ArgoCD
@@ -196,12 +178,12 @@ kubectl port-forward -n application svc/mlflow-tracking 5000:80
 
 Логін MLflow: `admin`
 
-Пароль MLflow: `mlflowpass`
+Пароль MLflow: `mlflowpassword123`
 
 ## GitOps repo
 
 Application manifest лежить у репозиторії:
 
 ```text
-https://github.com/vdubyna/goit-argo
+https://github.com/vdubyna/go-it-ai-ml/tree/lesson-7/lesson-7/goit-argo
 ```

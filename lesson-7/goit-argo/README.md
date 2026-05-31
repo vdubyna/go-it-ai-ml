@@ -53,4 +53,4 @@ kubectl port-forward -n application svc/mlflow-tracking 5000:80
 
 Логін: `admin`
 
-Пароль: `mlflowpass`
+Пароль: `mlflowpassword123`
