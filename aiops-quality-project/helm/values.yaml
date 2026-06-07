@@ -1,0 +1,43 @@
+replicaCount: 1
+
+image:
+  repository: registry.gitlab.com/example/aiops-quality-project/aiops-quality-api
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+env:
+  modelPath: /app/model/model.pkl
+  driftZThreshold: "3.0"
+  driftWebhookUrl: ""
+  logLevel: INFO
+
+metrics:
+  enabled: true
+  path: /metrics
+  port: "8000"
+
+podLabels:
+  app.kubernetes.io/part-of: aiops-quality-project
+  logging: loki
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70

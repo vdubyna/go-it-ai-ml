@@ -1,0 +1,35 @@
+- job_name: aiops-quality-api
+  metrics_path: /metrics
+  kubernetes_sd_configs:
+    - role: pod
+  relabel_configs:
+    - action: keep
+      source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_scrape
+      regex: "true"
+    - action: keep
+      source_labels:
+        - __meta_kubernetes_pod_label_app_kubernetes_io_name
+      regex: aiops-quality-api
+    - action: replace
+      source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_path
+      target_label: __metrics_path__
+      regex: (.+)
+    - action: replace
+      source_labels:
+        - __address__
+        - __meta_kubernetes_pod_annotation_prometheus_io_port
+      regex: ([^:]+)(?::\d+)?;(\d+)
+      replacement: $1:$2
+      target_label: __address__
+    - action: labelmap
+      regex: __meta_kubernetes_pod_label_(.+)
+    - action: replace
+      source_labels:
+        - __meta_kubernetes_namespace
+      target_label: namespace
+    - action: replace
+      source_labels:
+        - __meta_kubernetes_pod_name
+      target_label: pod

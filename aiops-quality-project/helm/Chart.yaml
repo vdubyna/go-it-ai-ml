@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aiops-quality-api
+description: FastAPI inference service with drift detection and observability.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,6 @@
+fastapi==0.111.0
+great_expectations==0.18.22
+pandas==2.2.2
+prometheus-client==0.20.0
+pydantic<2
+uvicorn[standard]==0.30.1

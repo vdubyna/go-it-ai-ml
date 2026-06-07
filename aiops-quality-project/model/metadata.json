@@ -1,0 +1,12 @@
+{
+  "version": "0.1.0",
+  "trained_at": "2026-06-07T09:48:43.857875+00:00",
+  "model_type": "mock-logistic-regression",
+  "output_path": "model/model.pkl",
+  "feature_names": [
+    "cpu_load",
+    "memory_pressure",
+    "error_rate",
+    "request_latency_ms"
+  ]
+}
