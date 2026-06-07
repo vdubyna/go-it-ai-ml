@@ -4,4 +4,5 @@ __pycache__/
 *.py[cod]
 *.log
 *.zip
+!lesson-10/mlops-train-automation/terraform/lambda/*.zip
 lesson-3/.cache/

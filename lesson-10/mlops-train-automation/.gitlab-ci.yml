@@ -1,0 +1,19 @@
+stages:
+  - train
+
+variables:
+  AWS_DEFAULT_REGION: "us-east-1"
+
+train-model:
+  stage: train
+  image: amazon/aws-cli:2.15.0
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+  script:
+    - test -n "$STEP_FUNCTION_ARN"
+    - |
+      INPUT_JSON="{\"source\":\"gitlab-ci\",\"commit\":\"${CI_COMMIT_SHORT_SHA}\",\"branch\":\"${CI_COMMIT_REF_NAME}\",\"pipeline_id\":\"${CI_PIPELINE_ID}\",\"pipeline_url\":\"${CI_PIPELINE_URL}\"}"
+      aws stepfunctions start-execution \
+        --state-machine-arn "$STEP_FUNCTION_ARN" \
+        --name "train-${CI_COMMIT_SHORT_SHA}-$(date +%s)" \
+        --input "$INPUT_JSON"
